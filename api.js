@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const ADMIN_IDS = [
   7873520476,   // Ibrohim

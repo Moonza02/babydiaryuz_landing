@@ -1,0 +1,15 @@
+{
+  "name": "babydiaryuz-landing",
+  "version": "1.0.0",
+  "description": "BabyDiary premium kidswear landing page",
+  "main": "api.js",
+  "scripts": {
+    "start": "node api.js"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.7"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

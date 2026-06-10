@@ -17,16 +17,26 @@ const DELIVERY_ZONES = {
   'Yangihayt': 25000, 'Toshkent viloyati': 35000, 'Boshqa': 30000
 };
 
-function getProducts() {
+async function getProducts() {
   try {
-    // Avval /app/products.json dan, yo'q bo'lsa repo ichidagidan
-    const filePath = fs.existsSync(PRODUCTS_FILE)
-      ? PRODUCTS_FILE
-      : path.join(__dirname, 'products.json');
-    const raw = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(raw);
+    // Bot internal networkdan real-time o'qish
+    const BOT_URL = 'http://babydiaryuz.railway.internal:8081/products';
+    const res = await new Promise((resolve, reject) => {
+      const req = require('http').get(BOT_URL, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => resolve(data));
+      });
+      req.on('error', reject);
+      req.setTimeout(3000, () => { req.destroy(); reject(new Error('timeout')); });
+    });
+    return JSON.parse(res);
   } catch {
-    return [];
+    // Fallback: local products.json
+    try {
+      const raw = fs.readFileSync(path.join(__dirname, 'products.json'), 'utf8');
+      return JSON.parse(raw);
+    } catch { return []; }
   }
 }
 
@@ -69,16 +79,20 @@ const server = http.createServer((req, res) => {
 
   // GET /api/products — products.json dan real-time
   if (req.method === 'GET' && url === '/api/products') {
-    const products = getProducts();
-    const active = products.filter(p => !p.stock || parseInt(p.stock) > 0);
-    return json(res, active);
+    getProducts().then(function(products) {
+      var active = products.filter(function(p) { return !p.stock || parseInt(p.stock) > 0; });
+      json(res, active);
+    }).catch(function() { json(res, []); });
+    return;
   }
 
   // GET /api/categories — mavjud kategoriyalar
   if (req.method === 'GET' && url === '/api/categories') {
-    const products = getProducts();
-    const cats = [...new Set(products.map(p => p.category).filter(Boolean))];
-    return json(res, cats);
+    getProducts().then(function(products) {
+      var cats = [...new Set(products.map(function(p){return p.category;}).filter(Boolean))];
+      json(res, cats);
+    }).catch(function() { json(res, []); });
+    return;
   }
 
   // GET /api/delivery-zones

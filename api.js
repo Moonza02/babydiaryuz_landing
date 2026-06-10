@@ -19,20 +19,17 @@ const DELIVERY_ZONES = {
 
 async function getProducts() {
   try {
-    // Bot internal networkdan real-time o'qish
-    const BOT_URL = 'http://babydiaryuz.railway.internal:8081/products';
-    const res = await new Promise((resolve, reject) => {
-      const req = require('http').get(BOT_URL, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => resolve(data));
-      });
-      req.on('error', reject);
-      req.setTimeout(3000, () => { req.destroy(); reject(new Error('timeout')); });
+    // GitHub raw dan real-time o'qish (bot push qilganda yangilanadi)
+    const url = 'https://raw.githubusercontent.com/Moonza02/babydiaryuz_landing/main/products.json?t=' + Date.now();
+    const data = await new Promise((resolve, reject) => {
+      require('https').get(url, (res) => {
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => resolve(body));
+      }).on('error', reject);
     });
-    return JSON.parse(res);
+    return JSON.parse(data);
   } catch {
-    // Fallback: local products.json
     try {
       const raw = fs.readFileSync(path.join(__dirname, 'products.json'), 'utf8');
       return JSON.parse(raw);

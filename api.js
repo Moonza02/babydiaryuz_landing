@@ -5,7 +5,10 @@ const https = require('https');
 
 const PORT = process.env.PORT || 8080;
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const ADMIN_IDS = [7873520476, 5285940949, 8733385729];
+const ADMIN_IDS = [5285940949, 512101064, 8733385729];
+
+// Bot /app/products.json ga saqlaydi — sayt ham o'sha yerdan o'qiydi
+const PRODUCTS_FILE = '/app/products.json';
 
 const DELIVERY_ZONES = {
   'Chilonzor': 15000, 'Yunusobod': 15000, 'Mirzo Ulugbek': 15000,
@@ -13,6 +16,19 @@ const DELIVERY_ZONES = {
   'Olmazor': 18000, 'Sergeli': 20000, 'Bektemir': 22000,
   'Yangihayt': 25000, 'Toshkent viloyati': 35000, 'Boshqa': 30000
 };
+
+function getProducts() {
+  try {
+    // Avval /app/products.json dan, yo'q bo'lsa repo ichidagidan
+    const filePath = fs.existsSync(PRODUCTS_FILE)
+      ? PRODUCTS_FILE
+      : path.join(__dirname, 'products.json');
+    const raw = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
 
 function sendTelegram(chatId, text) {
   return new Promise((resolve) => {
@@ -51,12 +67,26 @@ const server = http.createServer((req, res) => {
 
   const url = req.url.split('?')[0];
 
-  // Yetkazish zonalari
+  // GET /api/products — products.json dan real-time
+  if (req.method === 'GET' && url === '/api/products') {
+    const products = getProducts();
+    const active = products.filter(p => !p.stock || parseInt(p.stock) > 0);
+    return json(res, active);
+  }
+
+  // GET /api/categories — mavjud kategoriyalar
+  if (req.method === 'GET' && url === '/api/categories') {
+    const products = getProducts();
+    const cats = [...new Set(products.map(p => p.category).filter(Boolean))];
+    return json(res, cats);
+  }
+
+  // GET /api/delivery-zones
   if (req.method === 'GET' && url === '/api/delivery-zones') {
     return json(res, DELIVERY_ZONES);
   }
 
-  // Buyurtma qabul qilish
+  // POST /api/order
   if (req.method === 'POST' && url === '/api/order') {
     let body = '';
     req.on('data', c => body += c);
@@ -103,7 +133,7 @@ ${itemsList}
     return;
   }
 
-  // HTML sayt
+  // GET / — HTML sayt
   if (req.method === 'GET' && (url === '/' || url === '/index.html')) {
     const file = path.join(__dirname, 'index.html');
     fs.readFile(file, (err, data) => {
@@ -119,5 +149,7 @@ ${itemsList}
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`BabyDiary server ishlayapti: port ${PORT}`);
+  console.log(`BabyDiary sayt serveri: port ${PORT}`);
+  console.log(`Products fayl: ${PRODUCTS_FILE}`);
+  console.log(`/data mavjud: ${fs.existsSync('/data')}`);
 });
